@@ -1,0 +1,397 @@
+c     **** Monte Carlo calc to make mi=8 images of 2VB1 that reproduce site occupancies **** 
+
+      implicit real*4 (a-h,o-z)
+      include 'readhin.cmn'
+      parameter (mrest=2500, mgroup=250, mingroup=10, mint=50, mpos=72, mtype=50)
+      real*4 xg(m,mpos),yg(m,mpos),zg(m,mpos)
+      real*4 xoff(mrest,mrest),yoff(mrest,mrest),zoff(mrest,mrest)
+      real*4 eps(mtype),sig(mtype),eps2(mtype,mtype),sig2(mtype,mtype)
+      real*4 frtype(mpos,mgroup),e(mrest,mrest)
+      real*4 water(6,mpos)
+      integer iarest(mrest),jarest(mrest),narest(mrest)
+      integer nberint(mrest),intlist(mint,mrest),ntype(mpos,mgroup),npos(mgroup)
+      integer group(mingroup,mgroup),config(mrest)
+      logical iswater(mgroup)
+
+      character*12 fname(3)
+      data fname /'2VB1AAAc.hin','2VB1BBBc.hin','2VB1AACc.hin'/
+
+c     ************* restart from dump file ******************
+
+      open (1,file='config.dump',status='old',form='unformatted',err=30)
+      read (1) xg,gy,zg,xoff,yoff,zoff,eps2,sig2,frtype,e
+      read (1) nberint,intlist,ntype,npos,group,config,iswater
+      read (1) rcut,natom1,nmol1,initr1,initr2,iwatr1,iwatr2
+      close (1)
+      if (.not. readhin ('config.hin',0) ) stop 'restart hin file not found'
+      goto 31
+30    continue
+
+c     ************ else start from the beginning ****************
+
+c     **** read and process the coords for configs A B and C ****
+
+      do ic= 1,3
+
+	nmol= 0
+	natom= 0
+        if (.not. readhin (fname(ic),0)) stop 'file not found'
+	nimage= 1
+
+	if (ic.eq.2) then
+c	  **** add space for 9 missing atoms in TYR 20 - A of config B and delete two HXT ****
+c	  **** missing atoms are CD1 CD2 CE1 CE2 CZ OH and hydrogens HD1 HD2 HE1 HE2 and HH ****
+	  resname(1,imol)(1:3)= 'TYR'
+	  i= iares(20,1) - 1
+	  call hdel (i+11,2,1)
+	  call hadd (i+6,6,1)
+	  call hadd (i+16,5,1)
+c	  **** copy over coords of str B ****
+	  do i= iares(20,1),jares(20,1)
+	    xg(i,2)= x(i)
+	    yg(i,2)= y(i)
+	    zg(i,2)= z(i)
+	  end do
+c	  **** copy back A str ****
+	  call hcopy (isave,iares(20,1),nares(20,1))
+c	  **** copy back new coords, use CG locn as shit for missing atoms ****
+	  i= iares(20,1) + 5
+	  dx= xg(i,2) - xg(i,1)
+	  dy= yg(i,2) - yg(i,1)
+	  dz= zg(i,2) - zg(i,1)
+	  do i= iares(20,1),jares(20,1)
+	    if (xg(i,2).eq.-1000.) then
+	      x(i)= xg(i,1) + dx
+	      y(i)= yg(i,1) + dy
+	      z(i)= zg(i,1) + dz
+	    else
+	      x(i)= xg(i,2)
+	      y(i)= yg(i,2)
+	      z(i)= zg(i,2)
+	    end if
+	  end do
+	end if
+
+c	**** find NO3s, add space for optional water ****
+
+	init1= 0
+	do imol= 1,nmol
+	  if (resname(1,imol)(1:3).eq.'NO3') then
+
+c	    **** mol numbers of first and last nitrates ****
+	    if (init1.eq.0) init1= imol
+	    init2= imol
+
+c	    **** add space for 3 atoms at end of res ****
+	    j= jares(1,imol)
+	    call hadd (j,3,1)
+
+	    nat(j+1)= 8
+	    atname(j+1)= '    O'
+	    ats(j+1)= 'O '
+	    attype(j+1)= 'OW'
+	    q(j+1)= -0.834
+	    flag(j+1)= '     h'
+	    ncon(j+1)= 2
+	    icon(1,j+1)= 6
+	    icon(2,j+1)= 7
+	    scon(1,j+1)= 's'
+	    scon(2,j+1)= 's'
+	    call hbadd (iares(1,imol),j+1,'s')
+	    x(j+1)= x(iares(1,imol))
+	    y(j+1)= y(iares(1,imol))
+	    z(j+1)= z(iares(1,imol))
+
+	    nat(j+2)= 1
+	    atname(j+2)= '   1H'
+	    ats(j+2)= 'H '
+	    attype(j+2)= 'HW'
+	    q(j+2)= 0.417
+	    flag(j+2)= '     -'
+	    ncon(j+2)= 1
+	    icon(1,j+2)= 5
+	    scon(1,j+2)= 's'
+
+	    nat(j+3)= 1
+	    atname(j+3)= '   2H'
+	    ats(j+3)= 'H '
+	    attype(j+3)= 'HW'
+	    q(j+3)= 0.417
+	    flag(j+3)= '     -'
+	    ncon(j+3)= 1
+	    icon(1,j+3)= 5
+	    scon(1,j+3)= 's'
+
+	  end if
+	end do
+
+	write (6,*) 'nitrates =',init2-init1+1,init1,init2
+
+c	**** find waters, add space for hydrogens ****
+
+	iwat1= 0
+	do imol= 1,nmol
+	  if (resname(1,imol)(1:3).eq.'Hoh') then
+	    resname(1,imol)(1:3)= 'HOH'
+
+c	    **** mol numbers of first and last waters ****
+	    if (iwat1.eq.0) iwat1= imol
+	    iwat2= imol
+
+c	    **** add space for 2 atoms at end of res ****
+	    j= jares(1,imol)
+	    call hadd (j,2,1)
+
+	    nat(j)= 8
+	    atname(j)= '    O'
+	    ats(j)= 'O '
+	    attype(j)= 'OW'
+	    q(j)= -0.834
+	    flag(j)= '     h'
+	    ncon(j)= 2
+	    icon(1,j)= 2
+	    icon(2,j)= 3
+	    scon(1,j)= 's'
+	    scon(2,j)= 's'
+
+	    nat(j+1)= 1
+	    atname(j+1)= '   1H'
+	    ats(j+1)= 'H '
+	    attype(j+1)= 'HW'
+	    q(j+1)= 0.417
+	    flag(j+1)= '     -'
+	    ncon(j+1)= 1
+	    icon(1,j+1)= 1
+	    scon(1,j+1)= 's'
+
+	    nat(j+2)= 1
+	    atname(j+2)= '   2H'
+	    ats(j+2)= 'H '
+	    attype(j+2)= 'HW'
+	    q(j+2)= 0.417
+	    flag(j+2)= '     -'
+	    ncon(j+2)= 1
+	    icon(1,j+2)= 1
+	    scon(1,j+2)= 's'
+
+	  end if
+	end do
+
+	write (6,*) 'waters    =',iwat2-iwat1+1,iwat1,iwat2
+	write (6,*) 'Finished mol ',fname(ic),' natom=',natom
+
+c	**** copy into main coord storage for each posibility ****
+
+	do i= 1,natom
+	  xg(i,ic)= x(i)
+	  yg(i,ic)= y(i)
+	  zg(i,ic)= z(i)
+	end do
+
+	if (ic.eq.1) then
+c	  **** for str A, copy TYR 20 - A so as to overwrite errors for str B ****
+	  isave= natom+1
+	  call hcopy (iares(20,1),isave,nares(20,1))
+	end if
+
+      end do
+
+c     ************ create 72 alternative posibilities for each water ****************
+
+c     ******** read water orientations *******
+      open (1,file='makeh2o.out',status='old')
+      read (1,*) ((water(i,j),i=1,6),j=1,mpos)
+      close (1)
+      write (6,*) '72 reference water orientatioons read from makeh2o.out'
+
+      do imol= init1,init2
+c	**** set std water config for alternate to nitrates ****
+	i= iares(1,imol) + 4
+	write (6,*) 'setting alt water for nitrate ',imol,i
+	do ipos= 1,72
+	  xg(i,ipos)= xg(i,1)
+	  yg(i,ipos)= yg(i,1)
+	  zg(i,ipos)= zg(i,1)
+	  xg(i+1,ipos)= water(1,ipos) + xg(i,ipos)
+	  yg(i+1,ipos)= water(2,ipos) + yg(i,ipos)
+	  zg(i+1,ipos)= water(3,ipos) + zg(i,ipos)
+	  xg(i+2,ipos)= water(4,ipos) + xg(i,ipos)
+	  yg(i+2,ipos)= water(5,ipos) + yg(i,ipos)
+	  zg(i+2,ipos)= water(6,ipos) + zg(i,ipos)
+	end do
+	x(i+1)= xg(i+1,1)
+	y(i+1)= yg(i+1,1)
+	z(i+1)= zg(i+1,1)
+	x(i+2)= xg(i+2,1)
+	y(i+2)= yg(i+2,1)
+	z(i+2)= zg(i+2,1)
+      end do
+
+      do imol= iwat1,iwat2
+c	**** set std water config for normal waters ****
+	i= iares(1,imol)
+	write (6,*) 'setting water ',imol,i
+	do ipos= 1,72
+	  xg(i,ipos)= xg(i,1)
+	  yg(i,ipos)= yg(i,1)
+	  zg(i,ipos)= zg(i,1)
+	  xg(i+1,ipos)= water(1,ipos) + xg(i,ipos)
+	  yg(i+1,ipos)= water(2,ipos) + yg(i,ipos)
+	  zg(i+1,ipos)= water(3,ipos) + zg(i,ipos)
+	  xg(i+2,ipos)= water(4,ipos) + xg(i,ipos)
+	  yg(i+2,ipos)= water(5,ipos) + yg(i,ipos)
+	  zg(i+2,ipos)= water(6,ipos) + zg(i,ipos)
+	end do
+	x(i+1)= xg(i+1,1)
+	y(i+1)= yg(i+1,1)
+	z(i+1)= zg(i+1,1)
+	x(i+2)= xg(i+2,1)
+	y(i+2)= yg(i+2,1)
+	z(i+2)= zg(i+2,1)
+      end do
+
+      call writehin ('jnk.hin',0)
+
+c     *********** create 7 copies ****************
+
+      write (6,*) alen,blen,clen
+      write (6,*) boxvecs
+
+      natom1= natom
+      nmol1= nmol
+      mi= 8
+      if (natom1*mi.gt.m) stop 'dimension m too small'
+      if (nmol1*mi.gt.mmol) stop 'dimension mmol too small'
+
+      im= 1
+      do ia= 0,1
+	do ib= 0,1
+	  do ic= 0,1
+	   if (ia.ne.0 .or. ib.ne.0 .or. ic.ne.0) then
+	    im= im + 1
+	    i0= (im-1)*natom1
+	    imol0= (im-1)*nmol1
+	    do imol= 1,nmol1
+	      call hcopymol (imol,imol0+imol)
+	    end do
+	    dx= boxvecs(1)*ia + boxvecs(4)*ib + boxvecs(7)*ic
+	    dy=                 boxvecs(5)*ib + boxvecs(8)*ic
+	    dz= 				boxvecs(9)*ic
+	    write (6,'(a,i3,3f10.3)') 'expn image',im,dx,dy,dz
+	    do i= 1,natom1
+	      x(i+i0)= x(i) + dx
+	      y(i+i0)= y(i) + dy
+	      z(i+i0)= z(i) + dz
+	      do ipos= 1,mpos
+	        xg(i+i0,ipos)= xg(i,ipos) + dx
+	        yg(i+i0,ipos)= yg(i,ipos) + dy
+	        zg(i+i0,ipos)= zg(i,ipos) + dz
+	      end do
+	    end do
+	   end if
+	  end do
+	end do
+      end do
+
+c     **** double cell vectors ****
+
+      alen= alen * 2.0
+      blen= blen * 2.0
+      clen= clen * 2.0
+      do i= 1,9
+	boxvecs(i)= boxvecs(i) * 2.0
+	boxvecsinv(i)= boxvecsinv(i) / 2.0
+      end do
+
+      i= molind(nmol1+1)
+      call writehin ('config.hin',0)
+
+c     **** convert all indices from res/mol to absolute res number ****
+
+      nrest= 0
+      do imol= 1,nmol
+	do ires= 1,nres(imol)
+	  nrest= nrest + 1
+	  if (nrest.gt.mrest) stop 'mrest too small'
+	  iarest(nrest)= iares(ires,imol)
+	  jarest(nrest)= jares(ires,imol)
+	  narest(nrest)= nares(ires,imol)
+	  if (imol.eq.init1) initr1= nrest
+	  if (imol.eq.init2) initr2= nrest
+	  if (imol.eq.iwat1) iwatr1= nrest
+	  if (imol.eq.iwat2) iwatr2= nrest
+	end do
+      end do
+      write (6,*) 'total nber of residues in expanded system=',nrest
+      nrest1= nrest/mi
+
+c     ******* find the lattice displ vectors for ints between nearest images of residues ****
+c     ******* and included interaction list for each residue ****
+
+      nberint= 0
+      rcut= min (10.0,rinscr)
+      write (6,*) 'cuttoff distance for interactions=',rcut
+      rcut2= rcut**2
+
+      do ires= 1,nrest
+	i1= iarest(ires)
+	do jres= 1,nrest
+	  j1= iarest(jres)
+	  dx= x(j1) - x(i1)
+	  dy= y(j1) - y(i1)
+	  dz= z(j1) - z(i1)
+	  a= (boxvecsinv(1)*dx + boxvecsinv(4)*dy + boxvecsinv(7)*dz) / alen
+	  b= (                   boxvecsinv(5)*dy + boxvecsinv(8)*dz) / blen
+	  c= (                                      boxvecsinv(9)*dz) / clen
+	  da= 0.0
+	  if (a.gt. 0.5) da= -1.0
+	  if (a.lt.-0.5) da=  1.0
+	  db= 0.0
+	  if (b.gt. 0.5) db= -1.0
+	  if (b.lt.-0.5) db=  1.0
+	  dc= 0.0
+	  if (c.gt. 0.5) dc= -1.0
+	  if (c.lt.-0.5) dc=  1.0
+	  da= 0.0
+	  xoff(ires,jres)= boxvecs(1)*da + boxvecs(4)*db + boxvecs(7)*dc
+	  yoff(ires,jres)=                 boxvecs(5)*db + boxvecs(8)*dc
+	  zoff(ires,jres)= 				   boxvecs(9)*dc
+
+c	  **** find shortest int distance between all atoms in residues ****
+
+	  r2min= 1.e30
+	  do i= iarest(ires),jarest(ires)
+	    do j= iarest(jres),jarest(jres)
+	      dx= x(j) - x(i) + xoff(ires,jres)
+	      dy= y(j) - y(i) + yoff(ires,jres)
+	      dz= z(j) - z(i) + zoff(ires,jres)
+	      r2= dx**2 + dy**2 + dz**2
+	      r2min= min (r2min,r2)
+	    end do
+	  end do
+	  
+	  if (r2min.lt.rcut2) then
+c	    **** add to interaction lists ****
+	    nberint(ires)= nberint(ires) + 1
+	    if (nberint(ires).gt.mint) stop 'mint too small'
+	    intlist(nberint(ires),ires)= jres
+	    nberint(jres)= nberint(jres) + 1
+	    if (nberint(jres).gt.mint) stop 'mint too small'
+	    intlist(nberint(jres),jres)= ires
+	  end if
+
+	end do
+      end do
+
+      maxnberint= 0
+      do ires= 1,nrest
+	write (6,*) ires,' nber interacting residues=',nberint(ires)
+	maxnberint= max (maxnberint,nberint(ires))
+      end do
+      write (6,*) 'maximum nber of interactions of a residue with others=',maxnberint
+
+c     ******************** main MC computation loop ****************************
+
+31    continue
+
+      end

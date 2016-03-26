@@ -1,0 +1,299 @@
+  READING: 2VB1AAAc.hin
+ number of atoms=   2203
+ number of mols=   184
+ number of res=    312
+ number of charged res=  37 tot charge=  -1.623998 without roundoff=  -2
+ nber images=    1 inscribed radius=  13.535
+           1  axis lens:   27.0700000000000        31.2500000000000     
+   33.7600000000000     
+ 1,2-ethanediols =           3           3           5
+ nitrates =           9           6          14
+ waters    =         170          15         184
+ Finished mol 2VB1AAAc.hin natom=        2543
+  READING: 2VB1BBBc.hin
+ number of atoms=   2194
+ number of mols=   184
+ number of res=    312
+ number of charged res=  37 tot charge=  -1.609498 without roundoff=  -2
+ nber images=    1 inscribed radius=  13.535
+           2  axis lens:   27.0700000000000        31.2500000000000     
+   33.7600000000000     
+ del      2 atoms, start at    308 in res/mol    20    1 Tyr 20 - A     HXT
+ 1,2-ethanediols =           3           3           5
+ nitrates =           9           6          14
+ waters    =         170          15         184
+ Finished mol 2VB1BBBc.hin natom=        2543
+  READING: 2VB1AACc.hin
+ number of atoms=   2203
+ number of mols=   184
+ number of res=    312
+ number of charged res=  37 tot charge=  -1.623998 without roundoff=  -2
+ nber images=    1 inscribed radius=  13.535
+           3  axis lens:   27.0700000000000        31.2500000000000     
+   33.7600000000000     
+ 1,2-ethanediols =           3           3           5
+ nitrates =           9           6          14
+ waters    =         170          15         184
+ Finished mol 2VB1AACc.hin natom=        2543
+ 72 reference water orientatioons read from makeh2o.out
+ setting water           15        2034
+ setting water           16        2037
+ setting water           17        2040
+ setting water           18        2043
+ setting water           19        2046
+ setting water           20        2049
+ setting water           21        2052
+ setting water           22        2055
+ setting water           23        2058
+ setting water           24        2061
+ setting water           25        2064
+ setting water           26        2067
+ setting water           27        2070
+ setting water           28        2073
+ setting water           29        2076
+ setting water           30        2079
+ setting water           31        2082
+ setting water           32        2085
+ setting water           33        2088
+ setting water           34        2091
+ setting water           35        2094
+ setting water           36        2097
+ setting water           37        2100
+ setting water           38        2103
+ setting water           39        2106
+ setting water           40        2109
+ setting water           41        2112
+ setting water           42        2115
+ setting water           43        2118
+ setting water           44        2121
+ setting water           45        2124
+ setting water           46        2127
+ setting water           47        2130
+ setting water           48        2133
+ setting water           49        2136
+ setting water           50        2139
+ setting water           51        2142
+ setting water           52        2145
+ setting water           53        2148
+ setting water           54        2151
+ setting water           55        2154
+ setting water           56        2157
+ setting water           57        2160
+ setting water           58        2163
+ setting water           59        2166
+ setting water           60        2169
+ setting water           61        2172
+ setting water           62        2175
+ setting water           63        2178
+ setting water           64        2181
+ setting water           65        2184
+ setting water           66        2187
+ setting water           67        2190
+ setting water           68        2193
+ setting water           69        2196
+ setting water           70        2199
+ setting water           71        2202
+ setting water           72        2205
+ setting water           73        2208
+ setting water           74        2211
+ setting water           75        2214
+ setting water           76        2217
+ setting water           77        2220
+ setting water           78        2223
+ setting water           79        2226
+ setting water           80        2229
+ setting water           81        2232
+ setting water           82        2235
+ setting water           83        2238
+ setting water           84        2241
+ setting water           85        2244
+ setting water           86        2247
+ setting water           87        2250
+ setting water           88        2253
+ setting water           89        2256
+ setting water           90        2259
+ setting water           91        2262
+ setting water           92        2265
+ setting water           93        2268
+ setting water           94        2271
+ setting water           95        2274
+ setting water           96        2277
+ setting water           97        2280
+ setting water           98        2283
+ setting water           99        2286
+ setting water          100        2289
+ setting water          101        2292
+ setting water          102        2295
+ setting water          103        2298
+ setting water          104        2301
+ setting water          105        2304
+ setting water          106        2307
+ setting water          107        2310
+ setting water          108        2313
+ setting water          109        2316
+ setting water          110        2319
+ setting water          111        2322
+ setting water          112        2325
+ setting water          113        2328
+ setting water          114        2331
+ setting water          115        2334
+ setting water          116        2337
+ setting water          117        2340
+ setting water          118        2343
+ setting water          119        2346
+ setting water          120        2349
+ setting water          121        2352
+ setting water          122        2355
+ setting water          123        2358
+ setting water          124        2361
+ setting water          125        2364
+ setting water          126        2367
+ setting water          127        2370
+ setting water          128        2373
+ setting water          129        2376
+ setting water          130        2379
+ setting water          131        2382
+ setting water          132        2385
+ setting water          133        2388
+ setting water          134        2391
+ setting water          135        2394
+ setting water          136        2397
+ setting water          137        2400
+ setting water          138        2403
+ setting water          139        2406
+ setting water          140        2409
+ setting water          141        2412
+ setting water          142        2415
+ setting water          143        2418
+ setting water          144        2421
+ setting water          145        2424
+ setting water          146        2427
+ setting water          147        2430
+ setting water          148        2433
+ setting water          149        2436
+ setting water          150        2439
+ setting water          151        2442
+ setting water          152        2445
+ setting water          153        2448
+ setting water          154        2451
+ setting water          155        2454
+ setting water          156        2457
+ setting water          157        2460
+ setting water          158        2463
+ setting water          159        2466
+ setting water          160        2469
+ setting water          161        2472
+ setting water          162        2475
+ setting water          163        2478
+ setting water          164        2481
+ setting water          165        2484
+ setting water          166        2487
+ setting water          167        2490
+ setting water          168        2493
+ setting water          169        2496
+ setting water          170        2499
+ setting water          171        2502
+ setting water          172        2505
+ setting water          173        2508
+ setting water          174        2511
+ setting water          175        2514
+ setting water          176        2517
+ setting water          177        2520
+ setting water          178        2523
+ setting water          179        2526
+ setting water          180        2529
+ setting water          181        2532
+ setting water          182        2535
+ setting water          183        2538
+ setting water          184        2541
+  WRITING: jnk.hin
+ natoms,nimages,nmol=        2543           1         184
+ axis lens:   27.0700000000000        31.2500000000000     
+   33.7600000000000     
+   27.0700000000000       0.000000000000000E+000  0.000000000000000E+000
+  -11.7620614737671        28.9519672887236       0.000000000000000E+000
+  -10.4324137300982       -2.95384710318345        31.9715049857693     
+  0.000000000000000E+000  0.000000000000000E+000  0.000000000000000E+000
+expn image  2   -10.432    -2.954    31.972
+expn image  3   -11.762    28.952     0.000
+expn image  4   -22.194    25.998    31.972
+expn image  5    27.070     0.000     0.000
+expn image  6    16.638    -2.954    31.972
+expn image  7    15.308    28.952     0.000
+expn image  8     4.876    25.998    31.972
+ closest images to the 8-image set       20344
+  22 ; image 1 0 0 0 1 0 0 0 1  -20.865   -5.908   63.9
+   7 ; image 1 0 0 0 1 0 0 0 1   -2.659   63.812  -63.9
+  16 ; image 1 0 0 0 1 0 0 0 1  -23.524   57.904    0.0
+   4 ; image 1 0 0 0 1 0 0 0 1   20.865    5.908  -63.9
+  10 ; image 1 0 0 0 1 0 0 0 1   23.524  -57.904    0.0
+  14 ; image 1 0 0 0 1 0 0 0 1   54.140    0.000    0.0
+   1 ; image 1 0 0 0 1 0 0 0 1   44.389  -51.996  -63.9
+  23 ; image 1 0 0 0 1 0 0 0 1   33.275   -5.908   63.9
+  17 ; image 1 0 0 0 1 0 0 0 1   30.616   57.904    0.0
+  26 ; image 1 0 0 0 1 0 0 0 1    9.751   51.996   63.9
+  WRITING: config.hin
+ natoms,nimages,nmol=       20344           1        1472
+ total nber of residues in expanded system=        2496
+ new res indices for nitrates, 1,2-ethanediol and waters=         134
+         142         131         133         143         312
+ cuttoff distance for interactions=   5.00000000000000     
+ maximum nber of interactions of a          residue with others=          40
+ RESGROUP       1       1
+ RESGROUP       5       2
+ RESGROUP      14       3
+ RESGROUP      15       4
+ RESGROUP      17       5
+ RESGROUP      18       5
+ RESGROUP      19       5
+ RESGROUP      20       5
+ RESGROUP      21       5
+ RESGROUP      22       5
+ RESGROUP      23       5
+ RESGROUP      24       5
+ RESGROUP      25       5
+ RESGROUP      37       6
+ RESGROUP      39       7
+ RESGROUP      41       8
+ RESGROUP      43       9
+ RESGROUP      45      10
+ RESGROUP      48      11
+ RESGROUP      55      12
+ RESGROUP      61      13
+ RESGROUP      62      14
+ RESGROUP      68      15
+ RESGROUP      70      16
+ RESGROUP      73      17
+ RESGROUP      78      18
+ RESGROUP      79      19
+ RESGROUP      83      20
+ RESGROUP      85      21
+ RESGROUP      86      22
+ RESGROUP      87      23
+ RESGROUP      88      23
+ RESGROUP      89      23
+ RESGROUP      90      23
+ RESGROUP      97      24
+ RESGROUP      98      24
+ RESGROUP      99      24
+ RESGROUP     100      25
+ RESGROUP     103      26
+ RESGROUP     104      26
+ RESGROUP     106      27
+ RESGROUP     109      28
+ RESGROUP     111      29
+ RESGROUP     112      30
+ RESGROUP     113      31
+ RESGROUP     114      32
+ RESGROUP     116      33
+ RESGROUP     123      34
+ RESGROUP     128      35
+ first group with residues:           1
+ last group with residues:          35
+ first group with 1,2-ethanediol:          36
+ last group with 1,2-ethanediol:          38
+ first group with nitrate:          39
+ last group with nitrate:          47
+ first group with water:          48
+ last group with water:         217
+ total number of groups in each copy:         217

@@ -1,0 +1,1023 @@
+c     **** Monte Carlo calc to make mi=8 images of 2VB1 that reproduce site occupancies **** 
+
+      implicit real*4 (a-h,o-z)
+      include 'readhin.cmn'
+      include 'config.cmn'
+      
+      real*4 eps(mtype),sig(mtype)
+      real*4 frtype(2,mgroup)
+      real*4 water(6,mpos)
+      logical accept
+
+      integer nberint(mrest),intlist(mint,mrest),ntype(mpos,mgroup),npos(mgroup)
+      integer group(mingroup,mgroup),config(mgroup)
+      integer igroup,iingroup
+      character*2 datatype(mtype)
+      character*80 row   
+ 
+      character*9 watertest
+ 
+      character*12 resnamet(mrest)
+      character*12 fname(3)
+      data fname /'2VB1AAAc.hin','2VB1BBBc.hin','2VB1AACc.hin'/
+
+
+c     ************* restart from dump file ******************
+
+      open (1,file='config.dump',status='old',form='unformatted',err=30)
+      read (1) xg,gy,zg,xoff,yoff,zoff,eps2,sig2,frtype,e,enew
+      read (1) nberint,intlist,ntype,npos,group,config,iswater
+      read (1) rcut,natom1,nmol1,initr1,initr2,iwatr1,iwatr2
+      read (1) iedor1,iedor2,iattype,groupres,grouptype
+      read (1) ngroup,ningroup,resgroup,igroupres1,igroupres2
+      read (1) igroupedo1,igroupedo2,igroupno31,igroupno32
+      read (1) igrouphoh1,igrouphoh2,configres
+      read (1) temp
+      close (1)
+      if (.not. readhin ('config.hin',0) ) stop 'restart hin file not found'
+      goto 31
+30    continue
+
+c     ************ else start from the beginning ****************
+
+c     **** read and process the coords for configs A B and C ****
+
+      do ic= 1,3
+
+	nmol= 0
+	natom= 0
+        if (.not. readhin (fname(ic),0)) stop 'file not found'
+	nimage= 1
+
+	if (ic.eq.2) then
+c	  **** add space for 9 missing atoms in TYR 20 - A of config B and delete two HXT ****
+c	  **** missing atoms are CD1 CD2 CE1 CE2 CZ OH and hydrogens HD1 HD2 HE1 HE2 and HH ****
+	  resname(20,imol)(1:3)= 'TYR'
+	  i= iares(20,1) - 1
+	  call hdel (i+11,2,1)
+	  call hadd (i+6,6,1)
+	  call hadd (i+16,5,1)
+c	  **** copy over coords of str B ****
+	  do i= iares(20,1),jares(20,1)
+	    xg(i,2)= x(i)
+	    yg(i,2)= y(i)
+	    zg(i,2)= z(i)
+	  end do
+c	  **** copy back A str ****
+	  call hcopy (isave,iares(20,1),nares(20,1))
+c	  **** copy back new coords, use CG locn as shit for missing atoms ****
+	  i= iares(20,1) + 5
+	  dx= xg(i,2) - xg(i,1)
+	  dy= yg(i,2) - yg(i,1)
+	  dz= zg(i,2) - zg(i,1)
+	  do i= iares(20,1),jares(20,1)
+	    if (xg(i,2).eq.-1000.) then
+	      x(i)= xg(i,1) + dx
+	      y(i)= yg(i,1) + dy
+	      z(i)= zg(i,1) + dz
+	    else
+	      x(i)= xg(i,2)
+	      y(i)= yg(i,2)
+	      z(i)= zg(i,2)
+	    end if
+	  end do
+	end if
+
+c       ************* find EDOs *************************
+        iedo1= 0
+        do imol= 1,nmol
+          if (resname(1,imol)(1:3).eq.'EDO') then
+               
+c          **** mol numbers of first and last 1,2-ethanediol *****
+            if (iedo1.eq.0) iedo1= imol
+            iedo2= imol
+
+          end if
+        end do
+        
+        write (6,*) '1,2-ethanediols =', iedo2-iedo1+1,iedo1,iedo2     
+ 
+c	*************** find NO3s ********************
+
+	init1= 0
+	do imol= 1,nmol
+	  if (resname(1,imol)(1:3).eq.'NO3') then
+
+c	    **** mol numbers of first and last nitrates ****
+	    if (init1.eq.0) init1= imol
+	    init2= imol
+     
+	  end if
+	end do
+
+	write (6,*) 'nitrates =',init2-init1+1,init1,init2
+
+c	**** find waters, add space for hydrogens ****
+
+	iwat1= 0
+	do imol= 1,nmol
+	  if (resname(1,imol)(1:3).eq.'Hoh') then
+	    resname(1,imol)(1:3)= 'HOH'
+
+c	    **** mol numbers of first and last waters ****
+	    if (iwat1.eq.0) iwat1= imol
+	    iwat2= imol
+
+c	    **** add space for 2 atoms at end of res ****
+	    j= jares(1,imol)
+	    call hadd (j,2,1)
+
+	    nat(j)= 8
+	    atname(j)= '    O'
+	    ats(j)= 'O '
+	    attype(j)= 'OW'
+	    q(j)= -0.834
+	    flag(j)= '     h'
+	    ncon(j)= 2
+	    icon(1,j)= 2
+	    icon(2,j)= 3
+	    scon(1,j)= 's'
+	    scon(2,j)= 's'
+
+	    nat(j+1)= 1
+	    atname(j+1)= '   1H'
+	    ats(j+1)= 'H '
+	    attype(j+1)= 'HW'
+	    q(j+1)= 0.417
+	    flag(j+1)= '     -'
+	    ncon(j+1)= 1
+	    icon(1,j+1)= 1
+	    scon(1,j+1)= 's'
+
+	    nat(j+2)= 1
+	    atname(j+2)= '   2H'
+	    ats(j+2)= 'H '
+	    attype(j+2)= 'HW'
+	    q(j+2)= 0.417
+	    flag(j+2)= '     -'
+	    ncon(j+2)= 1
+	    icon(1,j+2)= 1
+	    scon(1,j+2)= 's'
+
+	  end if
+	end do
+
+	write (6,*) 'waters    =',iwat2-iwat1+1,iwat1,iwat2
+	write (6,*) 'Finished mol ',fname(ic),' natom=',natom
+
+c	**** copy into main coord storage for each posibility ****
+
+	do i= 1,natom
+	  xg(i,ic)= x(i)
+	  yg(i,ic)= y(i)
+	  zg(i,ic)= z(i)
+	end do
+
+	if (ic.eq.1) then
+c	  **** for str A, copy TYR 20 - A so as to overwrite errors for str B ****
+	  isave= natom+1
+	  call hcopy (iares(20,1),isave,nares(20,1))
+	end if
+
+      end do
+
+c     ************ create 72 alternative posibilities for each water ****************
+
+c     ******** read water orientations *******
+      open (1,file='makeh2o.out',status='old')
+      read (1,*) ((water(i,j),i=1,6),j=1,mpos)
+      close (1)
+      write (6,*) '72 reference water orientatioons read from makeh2o.out'
+
+      do imol= iwat1,iwat2
+c	**** set std water config for normal waters ****
+	i= iares(1,imol)
+	write (6,*) 'setting water ',imol,i
+	do ipos= 1,72
+	  xg(i,ipos)= xg(i,1)
+	  yg(i,ipos)= yg(i,1)
+	  zg(i,ipos)= zg(i,1)
+	  xg(i+1,ipos)= water(1,ipos) + xg(i,ipos)
+	  yg(i+1,ipos)= water(2,ipos) + yg(i,ipos)
+	  zg(i+1,ipos)= water(3,ipos) + zg(i,ipos)
+	  xg(i+2,ipos)= water(4,ipos) + xg(i,ipos)
+	  yg(i+2,ipos)= water(5,ipos) + yg(i,ipos)
+	  zg(i+2,ipos)= water(6,ipos) + zg(i,ipos)
+	end do
+	x(i+1)= xg(i+1,1)
+	y(i+1)= yg(i+1,1)
+	z(i+1)= zg(i+1,1)
+	x(i+2)= xg(i+2,1)
+	y(i+2)= yg(i+2,1)
+	z(i+2)= zg(i+2,1)
+      end do
+
+      call writehin ('jnk.hin',0)
+
+c     *********** create 7 copies ****************
+
+      write (6,*) alen,blen,clen
+      write (6,*) boxvecs
+
+      natom1= natom
+      nmol1= nmol
+      mi= 8
+      if (natom1*mi.gt.m) stop 'dimension m too small'
+      if (nmol1*mi.gt.mmol) stop 'dimension mmol too small'
+
+      im= 1
+      do ia= 0,1
+	do ib= 0,1
+	  do ic= 0,1
+	   if (ia.ne.0 .or. ib.ne.0 .or. ic.ne.0) then
+	    im= im + 1
+	    i0= (im-1)*natom1
+	    imol0= (im-1)*nmol1
+	    do imol= 1,nmol1
+	      call hcopymol (imol,imol0+imol)
+	    end do
+	    dx= boxvecs(1)*ia + boxvecs(4)*ib + boxvecs(7)*ic
+	    dy=                 boxvecs(5)*ib + boxvecs(8)*ic
+	    dz= 				boxvecs(9)*ic
+	    write (6,'(a,i3,3f10.3)') 'expn image',im,dx,dy,dz
+	    do i= 1,natom1
+	      x(i+i0)= x(i) + dx
+	      y(i+i0)= y(i) + dy
+	      z(i+i0)= z(i) + dz
+	      do ipos= 1,mpos
+	        xg(i+i0,ipos)= xg(i,ipos) + dx
+	        yg(i+i0,ipos)= yg(i,ipos) + dy
+	        zg(i+i0,ipos)= zg(i,ipos) + dz
+	      end do
+	    end do
+	   end if
+	  end do
+	end do
+      end do
+
+c     **** double cell vectors ****
+
+      alen= alen * 2.0
+      blen= blen * 2.0
+      clen= clen * 2.0
+      do i= 1,9
+	boxvecs(i)= boxvecs(i) * 2.0
+	boxvecsinv(i)= boxvecsinv(i) / 2.0
+      end do
+
+      call writehin ('config.hin',0)
+
+c     **** convert all indices from res/mol to absolute res number ****
+
+      nrest= 0
+      do imol= 1,nmol
+	do ires= 1,nres(imol)
+	  nrest= nrest + 1
+	  if (nrest.gt.mrest) stop 'mrest too small'
+	  iarest(nrest)= iares(ires,imol)
+	  jarest(nrest)= jares(ires,imol)
+	  narest(nrest)= nares(ires,imol)
+	  resnamet(nrest)= resname(ires,imol)
+          if (imol.eq.iedo1) iedor1= nrest
+          if (imol.eq.iedo2) iedor2= nrest 
+	  if (imol.eq.init1) initr1= nrest
+	  if (imol.eq.init2) initr2= nrest
+	  if (imol.eq.iwat1) iwatr1= nrest
+	  if (imol.eq.iwat2) iwatr2= nrest
+	end do
+      end do
+      write (6,*) 'total nber of residues in expanded system=',nrest
+      nrest1= nrest/mi
+      write (6,*) 'new res indices for nitrates, 1,2-ethanediol and waters='
+     $        ,initr1,initr2,iedor1,iedor2,iwatr1,iwatr2
+
+c     ******* find the lattice displ vectors for ints between nearest images of residues ****
+c     ******* and included interaction list for each residue ****
+
+      nberint= 0
+      rcut= 5.0
+      write (6,*) 'cuttoff distance for interactions=',rcut
+      rcut2= rcut**2
+
+      do ires= 1,nrest
+	i1= iarest(ires)
+	do jres= 1,nrest
+	  j1= iarest(jres)
+	  dx= x(j1) - x(i1)
+	  dy= y(j1) - y(i1)
+	  dz= z(j1) - z(i1)
+	  a= boxvecsinv(1)*dx + boxvecsinv(4)*dy + boxvecsinv(7)*dz
+	  b=                    boxvecsinv(5)*dy + boxvecsinv(8)*dz
+	  c=                                       boxvecsinv(9)*dz
+	  da= 0.0
+	  if (a.gt. 0.5) da= -1.0
+	  if (a.lt.-0.5) da=  1.0
+	  db= 0.0
+	  if (b.gt. 0.5) db= -1.0
+	  if (b.lt.-0.5) db=  1.0
+	  dc= 0.0
+	  if (c.gt. 0.5) dc= -1.0
+	  if (c.lt.-0.5) dc=  1.0
+	  xoff(ires,jres)= boxvecs(1)*da + boxvecs(4)*db + boxvecs(7)*dc
+	  yoff(ires,jres)=                 boxvecs(5)*db + boxvecs(8)*dc
+	  zoff(ires,jres)= 				   boxvecs(9)*dc
+C	  if (ires.eq.nrest) write (6,'(2i5,3f8.2,6f6.2,3f8.2)') ires,jres,dx,dy,dz,a,b,c,da,db,dc,
+C     $		xoff(ires,jres),yoff(ires,jres),zoff(ires,jres)
+
+c	  **** find shortest int distance between all atoms in residues ****
+
+	  if (ires.lt.jres) then
+	  do i= iarest(ires),jarest(ires)
+	    do j= iarest(jres),jarest(jres)
+	      dx= x(j) - x(i) + xoff(ires,jres)
+	      dy= y(j) - y(i) + yoff(ires,jres)
+	      dz= z(j) - z(i) + zoff(ires,jres)
+	      r2= dx**2 + dy**2 + dz**2
+C	      write (6,*) i,j,r2
+	      if (r2.lt.1.0) stop 'short distance error'
+	  
+	      if (r2.lt.rcut2) then
+c	        **** add to interaction lists ****
+	        nberint(ires)= nberint(ires) + 1
+	        if (nberint(ires).gt.mint) stop 'mint too small'
+	        intlist(nberint(ires),ires)= jres
+	        nberint(jres)= nberint(jres) + 1
+	        if (nberint(jres).gt.mint) stop 'mint too small'
+	        intlist(nberint(jres),jres)= ires
+C	        write (6,'(a,2i5,4f8.3,2i4)') 'int found',ires,jres,dx,dy,dz,r2,nberint(ires),nberint(jres)
+		goto 20
+	      end if
+	    end do
+	  end do
+20	  continue
+	  end if
+
+	end do
+      end do
+
+      maxnberint= 0
+      do ires= 1,nrest
+	write (6,*) resnamet(ires),ires,' nber interacting residues=',nberint(ires)
+	maxnberint= max (maxnberint,nberint(ires))
+      end do
+      write (6,*) 'maximum nber of interactions of a residue with others=',maxnberint
+
+c     *************** Read in Lennard-Jones parameters *************************
+
+      continue  
+      
+      open (71,file='LJ.dat',status='old')
+
+      ntypelj=0
+
+21    continue
+      read (71,'(a)',end=22) row
+      ntypelj=ntypelj+1
+      len=len_trim(row)
+      datatype(ntypelj)=row(1:2)
+      read(row(4:16),*) eps(ntypelj),sig(ntypelj)
+
+      goto 21
+  
+      close(71)
+
+22    continue
+
+      do i=1,ntypelj
+         do j=1,ntypelj
+
+            eps2(i,j)=sqrt(eps(i)*eps(j))
+            sig2(i,j)=(sig(i)+sig(j))/2.e0
+
+         end do
+      end do
+
+      do i=1,natom
+         do j=1,ntypelj
+
+            if (attype(i).eq.datatype(j)) then    
+               iattype(i)=j
+               write(6,'(a7,a2,3x,a12,i5)') 'attype:',attype(i),'atom number:',i
+            end if
+
+         end do
+      end do   
+                      
+c     ***************** Read in groups ********************
+
+      open(72,file='groups.dat',status='old')
+      
+      
+23    continue
+
+      read (72,'(a)',end=24) row     
+      len=len_trim(row)
+
+      read (row(1:6),*) igroup,iingroup
+      ngroup=igroup
+      grouptype(igroup)='RES'
+
+      read (row(7:9),*) npos(igroup)
+      do i=1,npos(igroup)-1
+         read (row(11+(i-1)*6:15+(i-1)*6),*) frtype(i,igroup)
+      end do
+
+      ningroup(igroup)=iingroup 
+
+      do i=1,iingroup    
+
+         read (72,'(a)') row
+         len=len_trim(row)
+
+         read (row(4:7),*) nbres 
+         group(i,igroup)= nbres
+
+         if (row(1:3).eq.'HOH') grouptype(igroup)='HOH'
+         if (row(1:3).eq.'NO3') grouptype(igroup)='NO3'
+         if (row(1:3).eq.'EDO') grouptype(igroup)='EDO'
+         if (grouptype(igroup).eq.'RES') resgroup(nbres) = igroup         
+
+      end do 
+     
+      goto 23
+   
+c123456789012345678901234567890123456789012345678901234567890
+cRES
+c 21  1  3 0.33  0.47
+cSER  85
+ 
+
+24    continue
+      close(72)    
+
+c     ****  Correction of residue numbers of EDO, NO3, HOH *****          
+      
+      iiedor=iedor1
+      iinitr=initr1
+      iiwatr=iwatr1
+      
+      do igroup=1,ngroup
+
+c      *****  1,2-Ethanediols  **********
+
+         if (grouptype(igroup).eq.'EDO') then
+           group(1,igroup)=iiedor
+           resgroup(iiedor)=igroup
+           iiedor=iiedor+1
+         end if
+
+c      *****  Nitrates  ******************
+       
+         if (grouptype(igroup).eq.'NO3') then
+           group(1,igroup)=iinitr
+           resgroup(iinitr)=igroup
+           iinitr=iinitr+1
+         end if
+
+c      ***** and Waters   *****************
+ 
+         if (grouptype(igroup).eq.'HOH') then
+           group(1,igroup)=iiwatr
+           resgroup(iiwatr)=igroup
+           iiwatr=iiwatr+1
+         end if
+      end do   
+
+c     ******* Group numbers ******
+
+      do igroup=1,ngroup
+
+        if (grouptype(igroup).eq.'RES') igroupres2=igroup
+        if (grouptype(igroup).eq.'EDO') igroupedo2=igroup
+        if (grouptype(igroup).eq.'NO3') igroupno32=igroup
+        if (grouptype(igroup).eq.'HOH') igrouphoh2=igroup
+
+      end do
+
+      igroupres1=1
+      igroupedo1=igroupres2+1
+      igroupno31=igroupedo2+1
+      igrouphoh1=igroupno32+1 
+    
+      write (6,*) 'first group with residues:',igroupres1
+      write (6,*) 'last group with residues:',igroupres2
+      write (6,*) 'first group with 1,2-ethanediol:',igroupedo1
+      write (6,*) 'last group with 1,2-ethanediol:',igroupedo2
+      write (6,*) 'first group with nitrate:',igroupno31
+      write (6,*) 'last group with nitrate:',igroupno32
+      write (6,*) 'first group with water:',igrouphoh1
+      write (6,*) 'last group with water:',igrouphoh2
+      write (6,*) 'total number of groups in each copy:',ngroup
+      
+c     ******* Generate 7 copies of the groups *********
+      
+      if(ngroup*8.gt.mgroup) stop 'MGROUP'
+      
+      ngroup1=ngroup
+      ngroup=8*ngroup
+
+      do i=2,8
+
+         do igroup=1,ngroup1
+
+            grouptype(igroup+(i-1)*ngroup1)=grouptype(igroup)             
+            npos(igroup+(i-1)*ngroup1)=npos(igroup)
+            ningroup(igroup+(i-1)*ngroup1)=ningroup(igroup)
+
+            do j=1,npos(igroup)-1
+               frtype(j,igroup+(i-1)*ngroup1)=frtype(j,igroup)
+            end do
+
+            do j=1,ningroup(igroup)
+               group(j,igroup+(i-1)*ngroup1)=group(j,igroup)+(i-1)*nrest1
+            end do   
+
+         end do
+      end do
+   
+      do i=2,8
+         do igroup=1,ngroup1
+            do iingroup=1,ningroup(igroup)
+               resgroup(group(iingroup,igroup)+(i-1)*nrest1)=
+     $                  igroup+(i-1)*ngroup1
+            end do
+         end do
+      end do
+    
+      write (6,'(a7)') 'GROUPS:'
+
+      do igroup=1,ngroup
+
+         write (6,'(a17,i5,a1)') 'Residues in group',igroup,':'
+
+         do iingroup=1,ningroup(igroup)
+            write (6,'(a8,i5,4x,a13,i5)') 'residue:',group(iingroup,igroup)
+
+         end do 
+      end do
+
+c      ********** Generate intial configuration **************
+
+      do igroup=1,ngroup
+
+c     *********** Residues ******************
+
+         if (grouptype(igroup).eq.'RES') then
+            iswater(igroup)=.false.
+            if (npos(igroup).eq.2) then 
+               if (rand(0).le.frtype(1,igroup)) then
+                  config(igroup)=1
+               else 
+                  config(igroup)=2
+               end if 
+            end if
+         
+            if (npos(igroup).eq.3) then
+               rn=rand(0)
+               if (rn.le.frtype(1,igroup)) then
+                  config(igroup)=1
+               else if (rn.gt.frtype(1,igroup) .and. 
+     $            rn.le.(frtype(1,igroup)+frtype(2,igroup))) then
+                  config(igroup)=2
+               else
+                  config(igroup)=3
+               end if
+            end if
+
+c     ****************** 1,2-ethandiol ****************
+      
+         else if (grouptype(igroup).eq.'EDO') then
+            iswater=.false.
+
+            if (rand(0).le.frtype(1,igroup)) then
+              config(igroup) = 1
+            else
+              config(igroup) = 4
+            end if
+              
+c     ******************* Nitrates ********************     
+           
+         else if (grouptype(igroup).eq.'NO3') then
+            iswater=.false.
+     
+            if (rand(0).le.frtype(1,igroup)) then 
+               config(igroup) = 1
+            else
+               config(igroup) = 4
+            end if 
+
+c     *****************  Water ******************  
+        
+         else 
+            config(igroup) = ceiling(rand(0)*72)
+
+            if (rand(0).le.frtype(1,igroup)) then     
+               iswater(igroup)=.true.  
+            else
+               iswater(igroup)=.false.
+
+            end if
+         end if
+      end do
+
+c     ***** Correct the total charge for each unit cell ************
+
+      do i=1,8
+         nbno3=0
+
+         do igroup=1,ngroup1
+
+            if (grouptype(igroup+(i-1)*ngroup1).eq.'NO3'
+     $        .and.config(igroup+(i-1)*ngroup1).eq.1) then    
+               nbno3=nbno3+1
+            end if
+
+         end do
+       
+         write(6,*) 'Number of nitrates before correction:',nbno3
+
+255      continue 
+
+         ii=0
+c      *************** Need more nitrates *************************       
+   
+         if (nbno3.lt.7) then
+
+           nbno31=7-nbno3
+           irn=ceiling(rand(0)*nbno31)
+           ino3=0
+           do igroup=1,ngroup1
+
+          
+             if (config(igroup+(i-1)*ngroup1).eq.4 .and.
+     $           grouptype(igroup+(i-1)*ngroup1).eq.'NO3') then
+
+               ino3=ino3+1
+
+               if (irn.eq.ino3) then
+
+                 if (rand(0).le.frtype(1,(igroup+(i-1)*ngroup1))) then
+                   config(igroup+(i-1)*ngroup1) = 1 
+                   nbno3=nbno3+1
+                 end if
+
+               end if
+             end if
+           end do
+           ii=1
+
+c      ************ Too many nitrates ************************
+
+         else if (nbno3.gt.7) then
+
+           nbno31=nbno3-7     
+           irn=ceiling(rand(0)*nbno31)
+
+           ino3=0
+           do igroup=1,ngroup1
+             
+
+             if (config(igroup+(i-1)*ngroup1).eq.1 .and.
+     $           grouptype(igroup+(i-1)*ngroup1).eq.'NO3') then
+
+               ino3=ino3+1
+
+               if (irn.eq.ino3) then
+
+                 if (rand(0).gt.frtype(1,(igroup+(i-1)*ngroup1))) then
+                   config(igroup+(i-1)*ngroup1) = 4 
+                   nbno3=nbno3-1
+                 end if
+
+               end if
+             end if
+           end do
+           ii=1
+        
+        else 
+           write (6,*) 'Number of nitrates after correction:',nbno3
+        end if
+
+        if (ii.eq.1) goto 255
+      end do     
+   
+
+c     ************* Config for each residue *************
+      
+      do irest=1,nrest
+        configres(irest)=1
+      end do
+
+      do igroup=1,ngroup
+        do iingroup=1,ningroup(igroup)
+          configres(group(iingroup,igroup))=config(igroup)    
+        end do
+      end do
+   
+      do irest=1,nrest
+         if (grouptype(resgroup(irest)).eq.'NO3') then
+            if (configres(irest).eq.1) then
+              write (6,'(a12,2x,a11)') resnamet(irest),'nitrate'
+            else if (configres(irest).eq.4) then
+              write (6,'(a12,2x,a11)') resnamet(irest),'not nitrate'
+            end if
+         end if
+      end do
+
+      do irest=1,nrest
+         if (iswater(resgroup(irest))) then
+            watertest='    WATER'
+         else 
+            watertest='NOT WATER'
+         end if
+         if (config(resgroup(irest)).ne.0) then
+            write (6,'(i2,a5,2x,a9)') config(resgroup(irest))
+     $          ,grouptype(resgroup(irest)),watertest
+         end if
+      end do
+
+c      ************ Calculate energy  ******************
+
+      do igroup=1,ngroup
+        iswaternew(igroup)=iswater(igroup)
+      end do
+ 
+      do irest=1,nrest
+        ipos=configres(irest)
+
+        do iint=1,nberint(irest)
+          jrest=intlist(iint,irest)
+          jpos=configres(jrest) 
+          call energy(irest,ipos,jrest,jpos)
+          e(irest,jrest)=enew(irest,jrest)
+        end do
+      end do          
+  
+      do irest=1,nrest
+        do jrest=1,nrest
+          if (e(irest,jrest).ne.0)  write (6,*) 'ENERGY:',e(irest,jrest)
+     $       ,irest,resnamet(irest)(1:3),jrest,resnamet(jrest)(1:3)
+        end do
+      end do
+ 
+      goto 3000
+c     ***************** Main MC computation loop ***********************
+                 
+31    continue
+      
+c      accept=.false.
+c      k1=1
+c      k2=10
+c      k3=10
+c      k4=10
+c      k5=100
+c      do k=1,1000
+c        nflag=1
+c        im=ceiling(rand(0)*8)
+c        rn=ceiling(rand(0)*(k1+k2+k3+k4+k5))
+    
+c     ******* RES *********
+c        if (rn.le.k1) then
+c          igroup=ceiling(rand(0)*(igroupres2-igroupres1+1))+igroupres1-1+
+c     $           (im-1)*ngroup1
+c          rnr=rand(0)
+c          if (npos(igroup).eq.2) then
+c            if (rnr.le.frtype(1,igroup)) then
+c              igroupnew=1
+c            else 
+c              igroupnew=2
+c            end if
+c          end if
+c  
+c          if (npos(igroup).eq.3) then
+c            if (rnr.le.frtype(1,igroup)) then
+c              igroupnew=1
+c            else if (rnr.gt.frtype(1,igroup) .and. 
+c     $               rnr.le.(frtype(1,igroup)+frtype(2,igroup)))
+c              igroupnew=2
+c            else
+c              igroupnew=3
+c          end if 
+c  
+c          if (config(igroup).eq.igroupnew) goto 32
+c
+cc    *** Calculating the new energies and test if accept or reject the step ***
+c        
+c          enold=0.e0     
+c          ennew=0.e0        
+c          do iingroup=1,ningroup(igroup)
+c            irest=group(iingroup,igroup)
+c            ipos=confignew(igroup)
+c            const=1.0e0
+c            do iint=1,nberint(irest)
+c              jrest=intlist(iint,irest)
+c              if (resgroup(jrest).eq.igroup) then
+c                jpos=confignew(igroup)
+c                const=0.5e0
+c              else
+c                jpos=config(resgroup(jrest))
+c              end if
+c              call energy(irest,ipos,jrest,jpos)
+c              enold=e(irest,jrest)+const*enold
+c              ennew=enew(irest,jrest)+const*ennew
+c            end do
+c          end do 
+c
+c          if (enold.ge.ennew) accept=.true.
+c          if (enold.lt.ennew) then
+c            if (rand(0).le.exp((enold-ennew)/kb*temp)) accept=.true.
+c          end if
+c        
+c          if (accept) then
+c            do iingroup=1,ningroup(igroup)
+c              irest=group(iingroup,igroup)
+c              do iint=1,nberint(irest)
+c                jrest=intlist(iint,irest)
+c                e(irest,jrest)=enew(irest,jrest)
+c                e(jrest,irest)=e(irest,jrest)
+c              end do
+c            end do 
+c          end if     
+c          goto 32
+c            
+cc     ******* EDO *********
+c        else if (rn.gt.k1 .and. rn.le.(k1+k2)) then
+c          igroup=ceiling(rand(0)*(igroupedo2-igroupedo1+1))+igroupedo1-1+
+c     $           (im-1)*ngroup1
+c          rnr=rand(0)
+c          if (rnr.le.frtype(1,igroup)) then
+c            igroupnew=1
+c          else 
+c            igroupnew=4
+c          end if
+c   
+c          if (config(igroup).eq.igroupnew) goto 32
+c          
+c
+c     ******* NO3 ******
+c        else if (rn.gt.(k1+k2) .and. rn.le.(k1+k2+k3)) then
+c          igroup=ceiling(rand(0)*(igroupno32-igroupno31+1))+igroupno31-1+
+c     $           (im-1)*ngroup1
+c          rnr=rand(0)
+c
+cc     ***** Nitrate coverts to a water another nitrate converts from 
+cc     ***** a water to a nitrate  
+c
+c          if (iswater(igroup)) then
+c            if (rnr.le.frtype(1,igroup)) then
+c              iwaternew(igroup)=.false.
+c              nbr=0
+c              rnr2=ceiling(rand(0)*7) 
+c              do jgroup=igroupno31+(im-1)*ngroup1,igroupno32+(im-1)*ngroup1
+c                if (iswater(jgroup)) nbr=nbr+1    
+c                if (iswater(jgroup).and.nbr.eq.rnr2) then
+c                  if (rand(0).gt.frtype(1,jgroup) then
+c                    iswaternew(jgroup)=.true.
+c                    kgroup=jgroup
+c                    nflag=2
+c                  else 
+c                    goto 32
+c                end if
+c              end do  
+c            else
+c              goto 32
+c            end if
+c
+c      ***** and the opposite *********** 
+c
+c          else
+c            if (rnr.le.frtype(1,igroup)) then
+c              goto 32
+c            else
+c              iswaternew(igroup)=.true.
+c              nbr=0
+c              rnr2=ceiling(rand(0)*2) 
+c              do jgroup=igroupno31+(im-1)*ngroup1,igroupno32+(im-1)*ngroup1
+c                if (.not.(iswater(jgroup))) nbr=nbr+1
+c                if (.not.(iswater(jgroup)).and. nbr.eq.rnr2) then
+c                  if (rand(0).le.frtype(1,jgroup)) then
+c                    iswaternew(jgroup)=.false.
+c                    kgroup=jgroup
+c                    nflag=2
+c                  else
+c                    goto 32
+c                  end if
+c                end if
+c              end do
+c            end if  
+c          end if
+c
+c     ******* Water ******
+c        else if (rn.gt.(k1+k2+k3) .and. rn.le.(k1+k2+k3+k4)) then
+c          igroup=ceiling(rand(0)*(igrouphoh2-igrouphoh1+1))+igrouphoh1-1+
+c     $           (im-1)*ngroup1
+c          rnr=rand(0)
+c          if (rnr.le.frtype(1,igroup)) then
+c            iswaternew(igroup)=.true.
+c            if (iswater(igroup)) goto 32
+c          else
+c            iswaternew(igroup)=.false.
+c            if (.not.iswater(igroup)) goto 32
+c          end if
+c          
+c     ******* Water config ******
+c        else
+c          nbr=0 
+c          do igroup2=igroupno31+(im-1)*ngroup1,igrouphoh2+(im-1)*ngroup1
+c            if (iswater(igroup2)) nbr=nbr+1
+c          end do
+c      
+c          jgroup=ceiling(rand(0)*nbr)
+c          nbr=0
+c          do igroup2=igroupno31+(im-1)*ngroup1,igrouphoh2+(im-1)*ngroup1
+c            if (iswater(igroup2)) nbr=nbr+1 
+c            if (iswater(igroup2) .and. nbr.eq.jgroup) then 
+c              igroup=igroup2
+c              confignew(igroup)=ceiling(rand(0)*72)
+c              if (config(igroup).eq.confignew(igroup)) goto 32
+c            end if
+c          end do
+c        end if 
+c
+c        
+c       
+c          
+c32      continue
+c
+c      end do
+3000  continue
+      end 
+
+c     ********************************************************************
+    
+      subroutine energy(irest,ipos,jrest,jpos)
+
+      implicit real*4 (a-h,o-z)
+      include 'readhin.cmn'
+      include 'config.cmn'
+
+c    ***** No HOH ,NO3 or EDO ************
+
+       if (grouptype(resgroup(irest)).eq.'HOH' .and.
+     $     .not. iswaternew(resgroup(irest))) then
+         enew(irest,jrest)=0.e0
+         goto 301
+       end if
+
+       if (grouptype(resgroup(jrest)).eq.'HOH' .and.
+     $    .not. iswaternew(resgroup(jrest))) then
+         enew(irest,jrest)=0.e0
+         goto 301 
+       end if
+       
+       if (grouptype(resgroup(irest)).eq.'EDO' .or.
+     $     grouptype(resgroup(irest)).eq.'NO3') then
+
+         if (ipos.eq.4) then
+           enew(irest,jrest)=0.e0
+           goto 301
+         end if
+
+       end if
+    
+       if (grouptype(resgroup(jrest)).eq.'EDO' .or. 
+     $     grouptype(resgroup(jrest)).eq.'NO3') then 
+
+         if (jpos.eq.4) then
+           enew(irest,jrest)=0.e0
+           goto 301
+         end if
+
+       end if
+      
+       etot=0.e0    
+
+       do i=iarest(irest),jarest(irest)        
+         do j=iarest(jrest),jarest(jrest)
+
+           dx=xg(i,ipos)-xg(j,jpos)+xoff(irest,jrest)
+           dy=yg(i,ipos)-yg(j,jpos)+yoff(irest,jrest)
+           dz=zg(i,ipos)-zg(j,jpos)+zoff(irest,jrest)
+        
+           r2=dx**2+dy**2+dz**2
+           r=sqrt(r2)
+ 
+           sigma2=(sig2(iattype(i),iattype(j)))**2
+           r2s=r2/sigma2
+           r6=r2s*r2s*r2s
+           r12=r6*r6          
+
+           elj=eps2(iattype(i),iattype(j))*(1./r12-2./r6)
+           ecoul=627.5095*q(i)*q(j)/(0.5291772086*r)
+
+           etot=etot+elj+ecoul
+
+         end do
+       end do 
+
+       enew(irest,jrest)=etot
+
+301    continue
+       return
+
+      end   
